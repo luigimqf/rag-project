@@ -1,0 +1,23 @@
+{
+  "name": "rag-project",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "concurrently -n \"FRONT,BACK\" -c \"cyan,magenta\" \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,js,json}\"",
+    "test": "pnpm -r run test",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter api dev"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@9.15.0"
+}
