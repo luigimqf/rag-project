@@ -8,14 +8,13 @@
     "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "build": "tsc",
-
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check .",
     "check:fix": "biome check --write .",
-
     "migration:generate": "npx drizzle-kit generate",
-    "migration:migrate": "npx drizzle-kit migrate"
+    "migration:migrate": "npx drizzle-kit migrate",
+    "ingest": "tsx src/scripts/ingest.ts"
   },
   "keywords": [],
   "author": "",
@@ -37,6 +36,7 @@
     "fastify": "^5.12.8",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
+    "unpdf": "^2.1.0",
     "zod": "^4.6.7"
   }
 }
