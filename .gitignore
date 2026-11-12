@@ -1,21 +1,25 @@
 # Dependências
 node_modules
 .pnpm-debug.log
+*.tsbuildinfo
 
-# Next.js
-.next
-out
+# Backend
+data
 
 # Build output
 dist
 build
+.next
+out
+coverage
 
 # Environment variables
 .env*
 !.env.example
 
-*.tsbuildinfo
-coverage
+# Cache
+.turbo
+.nx/cache
 
 # Logs
 logs
