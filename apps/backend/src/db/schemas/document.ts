@@ -5,5 +5,6 @@ export const documentsTable = pgTable("documents", {
   company: text('company').notNull(),
   doc_type: text('doc_type').notNull(),
   fiscal_year: integer('fiscal_year').notNull(),
+  fiscal_period: text('fiscal_period').notNull().default('anual'),
   file_name: text('file_name').notNull().unique(),
 })

@@ -17,7 +17,7 @@ async function ingestFile(fileName:string) {
 
   if(existing.length) return console.log(`${fileName} já ingerido`)
 
-  const [company, doc_type, year] = path.basename(fileName, ".pdf").split("_");
+  const [company, doc_type, year, period] = path.basename(fileName, ".pdf").split("_");
 
   if (!company || !doc_type || !year || Number.isNaN(Number(year))) {
     return console.warn(`${fileName}: nome fora do padrão empresa_tipo_ano.pdf, pulando`);
@@ -32,7 +32,13 @@ async function ingestFile(fileName:string) {
   await db.transaction(async (tx) => {
     const [doc] = await tx
       .insert(documentsTable)
-      .values({company, doc_type, fiscal_year: Number(year), file_name: fileName})
+      .values({
+        company,
+        doc_type,
+        fiscal_year: Number(year),
+        fiscal_period: period ?? "anual",
+        file_name: fileName
+      })
       .returning()
 
     if (!doc) throw new Error(`Falha ao inserir documento ${fileName}`);
