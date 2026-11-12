@@ -1,0 +1,151 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1d90c7d4-83d6-4581-b9ee-7ca7676563dd",
+  "prevIds": [
+    "cb207852-207f-4da4-b457-b809373a3eec"
+  ],
+  "footprints": [
+    {
+      "statementType": "rename_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "chunks",
+        "pipepine"
+      ],
+      "writes": [
+        "s|col|public.chunks.pipepine",
+        "n|col|public.chunks.pipepine",
+        "s|col|public.chunks.pipeline",
+        "n|col|public.chunks.pipeline"
+      ],
+      "reads": [
+        "n|tbl|public.chunks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "documents",
+        "fiscal_period"
+      ],
+      "writes": [
+        "s|col|public.documents.fiscal_period",
+        "n|col|public.documents.fiscal_period",
+        "e|col|public.documents.fiscal_period"
+      ],
+      "reads": [
+        "n|tbl|public.documents",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "chunks",
+        "chunks_embedding_idx"
+      ],
+      "writes": [
+        "s|idx|public.chunks_embedding_idx",
+        "n|idx|public.chunks_embedding_idx",
+        "e|idx|public.chunks_embedding_idx",
+        "n|rel|public.chunks_embedding_idx"
+      ],
+      "reads": [
+        "n|tbl|public.chunks",
+        "n|sch|public",
+        "n|col|public.chunks.embedding"
+      ]
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "chunks"
+      ],
+      "writes": [
+        "s|fk|public.chunks.chunks_document_id_documents_id_fkey",
+        "n|fk|public.chunks.chunks_document_id_documents_id_fkey",
+        "e|fk|public.chunks.chunks_document_id_documents_id_fkey",
+        "n|con|public.chunks.chunks_document_id_documents_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.chunks",
+        "n|sch|public",
+        "n|tbl|public.documents",
+        "n|sch|public",
+        "n|col|public.chunks.document_id",
+        "n|col|public.documents.id",
+        "e|uniqueness|public.documents.id"
+      ],
+      "sqlHash": "a5fee37722c4a28f"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "rename",
+      "key": "columns\u0000[\"public\",\"chunks\",\"pipepine\"]",
+      "set": {
+        "name": "pipeline"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "documents",
+        "name": "fiscal_period",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'anual'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "chunks",
+        "name": "chunks_embedding_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "embedding",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": {
+              "name": "vector_cosine_ops",
+              "default": false
+            }
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "hnsw",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"chunks\",\"chunks_document_id_documents_id_fkey\"]",
+      "set": {
+        "onDelete": "CASCADE"
+      }
+    }
+  ]
+}

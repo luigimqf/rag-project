@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "cb207852-207f-4da4-b457-b809373a3eec",
-  "prevIds": [
-    "f3bdb7b2-5953-4fd6-97d3-4625e82ef6b7"
-  ],
+  "prevIds": ["f3bdb7b2-5953-4fd6-97d3-4625e82ef6b7"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "chunks"
-      ],
+      "statementTarget": ["table", "public", "chunks"],
       "writes": [
         "s|tbl|public.chunks",
         "n|tbl|public.chunks",
@@ -22,17 +16,11 @@
         "n|type|public.chunks",
         "n|rel|public.chunks_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "documents"
-      ],
+      "statementTarget": ["table", "public", "documents"],
       "writes": [
         "s|tbl|public.documents",
         "n|tbl|public.documents",
@@ -42,37 +30,22 @@
         "n|rel|public.documents_pkey",
         "n|rel|public.documents_file_name_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
-      "statementTarget": [
-        "index",
-        "public",
-        "chunks",
-        "chunks_fts_idx"
-      ],
+      "statementTarget": ["index", "public", "chunks", "chunks_fts_idx"],
       "writes": [
         "s|idx|public.chunks_fts_idx",
         "n|idx|public.chunks_fts_idx",
         "e|idx|public.chunks_fts_idx",
         "n|rel|public.chunks_fts_idx"
       ],
-      "reads": [
-        "n|tbl|public.chunks",
-        "n|sch|public",
-        "n|col|public.chunks.fts"
-      ]
+      "reads": ["n|tbl|public.chunks", "n|sch|public", "n|col|public.chunks.fts"]
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "chunks"
-      ],
+      "statementTarget": ["table", "public", "chunks"],
       "writes": [
         "s|fk|public.chunks.chunks_document_id_documents_id_fkey",
         "n|fk|public.chunks.chunks_document_id_documents_id_fkey",
@@ -335,14 +308,10 @@
         "table": "chunks",
         "name": "chunks_document_id_documents_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "document_id"
-        ],
+        "columns": ["document_id"],
         "schemaTo": "public",
         "tableTo": "documents",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "NO ACTION",
         "entityType": "fks"
@@ -354,9 +323,7 @@
         "schema": "public",
         "table": "chunks",
         "name": "chunks_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -367,9 +334,7 @@
         "schema": "public",
         "table": "documents",
         "name": "documents_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -381,9 +346,7 @@
         "table": "documents",
         "name": "documents_file_name_key",
         "nameExplicit": false,
-        "columns": [
-          "file_name"
-        ],
+        "columns": ["file_name"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

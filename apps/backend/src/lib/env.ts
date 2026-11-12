@@ -10,7 +10,7 @@ dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 const schema = z.object({
   PORT: z.coerce.number(),
-  DB_URL: z.string()
+  DB_URL: z.string(),
 });
 
 const _env = schema.safeParse(process.env);
