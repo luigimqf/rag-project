@@ -9,8 +9,17 @@ const envFile = `.env.${nodeEnv}`;
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 const schema = z.object({
+  NODE_ENV: z.string(),
   PORT: z.coerce.number(),
   DB_URL: z.string(),
+  EMBEDDING_PROVIDER: z.enum(["ollama"]).default("ollama"),
+  EMBEDDER_HOST: z.url(),
+  EMBEDDER_MODEL: z.string().min(1),
+  EMBED_DIMS: z.coerce.number().int().positive(),
+
+  LLM_PROVIDER: z.enum(["ollama"]).default("ollama"),
+  LLM_HOST: z.url().optional(),
+  LLM_MODEL: z.string().min(1),
 });
 
 const _env = schema.safeParse(process.env);

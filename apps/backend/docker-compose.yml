@@ -17,6 +17,16 @@ services:
       - "11434:11434"
     volumes:
       - ollama:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m        # mantém os modelos carregados entre perguntas
+      OLLAMA_MAX_LOADED_MODELS: 2
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   pgdata:

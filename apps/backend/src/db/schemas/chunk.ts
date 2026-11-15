@@ -16,7 +16,7 @@ export const chunksTable = pgTable(
     page: integer("page").notNull(),
     content: text("content").notNull(),
     embedding: vector("embedding", { dimensions: 1024 }).notNull(),
-    document_id: integer("document_id")
+    documentId: integer("document_id")
       .notNull()
       .references(() => documentsTable.id, { onDelete: "cascade" }),
     fts: tsvector("fts").generatedAlwaysAs(
@@ -28,3 +28,8 @@ export const chunksTable = pgTable(
     index("chunks_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
   ],
 );
+
+export type Chunk = typeof chunksTable.$inferSelect;
+export type NewChunk = typeof chunksTable.$inferInsert;
+
+export type ChunkColumnKeys = keyof Chunk;

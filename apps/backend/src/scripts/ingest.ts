@@ -1,76 +1,87 @@
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/index.js";
-import { documentsTable } from "../db/schemas/document.js";
-import { eq } from "drizzle-orm";
-import { chunksTable } from "../db/schemas/chunk.js";
-import { readdir } from "node:fs/promises";
-import { extractPages } from "../ingest/pdf.js";
+import { embeddingProvider } from "../infra/providers/index.js";
 import { chunkPages } from "../ingest/chunker.js";
-import { embed } from "../ingest/embedder.js";
+import { extractPages } from "../ingest/pdf.js";
+import { buildPipelineId, CHUNKING } from "../ingest/pipeline.js";
+import type { NewChunkInput } from "../modules/retrieval/types.js";
+import { ChunkRepository } from "../shared/repositories/chunk.repository.js";
+import {
+  DocumentRepository,
+  type NewDocumentInput,
+} from "../shared/repositories/document.repository.js";
 
 const PDF_DIR = path.resolve("data/pdfs");
-const PIPELINE = "fixed-1000-200"; // Estrategia de chunking
-const BATCH = 32; // Batch para salver chunks
+const EMBED_BATCH = 32; // Textos por chamada ao modelo de embedding
+const PIPELINE = buildPipelineId(embeddingProvider.model);
+
+const documents = new DocumentRepository(db);
+const chunks = new ChunkRepository(db);
+
+/** Padrão: empresa_tipo_ano[_periodo].pdf */
+function parseFileName(fileName: string): NewDocumentInput | null {
+  const [company, docType, year, period] = path.basename(fileName, ".pdf").split("_");
+  const fiscalYear = Number(year);
+
+  if (!company || !docType || !year || Number.isNaN(fiscalYear)) return null;
+
+  return { company, docType, fiscalYear, fiscalPeriod: period ?? "anual", fileName };
+}
+
+async function embedInBatches(texts: string[]): Promise<number[][]> {
+  const vectors: number[][] = [];
+
+  for (let i = 0; i < texts.length; i += EMBED_BATCH) {
+    vectors.push(...(await embeddingProvider.embed(texts.slice(i, i + EMBED_BATCH))));
+    console.log(`  embeddings ${Math.min(i + EMBED_BATCH, texts.length)} / ${texts.length}`);
+  }
+
+  return vectors;
+}
 
 async function ingestFile(fileName: string) {
-  const existing = await db
-    .select()
-    .from(documentsTable)
-    .where(eq(documentsTable.file_name, fileName));
+  const meta = parseFileName(fileName);
 
-  if (existing.length) return console.log(`${fileName} já ingerido`);
-
-  const [company, doc_type, year, period] = path.basename(fileName, ".pdf").split("_");
-
-  if (!company || !doc_type || !year || Number.isNaN(Number(year))) {
+  if (!meta) {
     return console.warn(`${fileName}: nome fora do padrão empresa_tipo_ano.pdf, pulando`);
   }
 
+  const doc = (await documents.findByFileName(fileName)) ?? (await documents.create(meta));
+
+  if (await chunks.existsForDocument(doc.id, PIPELINE)) {
+    return console.log(`${fileName}: já ingerido (${PIPELINE})`);
+  }
+
   const pages = await extractPages(path.join(PDF_DIR, fileName));
+  const pieces = chunkPages(pages, CHUNKING.size, CHUNKING.overlap);
 
-  const chunks = chunkPages(pages);
+  console.log(`${fileName}: ${pages.length} páginas -> ${pieces.length} chunks`);
 
-  console.log(`${fileName}: ${pages.length} páginas -> ${chunks.length} chunks`);
+  const vectors = await embedInBatches(pieces.map((c) => c.content));
 
-  await db.transaction(async (tx) => {
-    const [doc] = await tx
-      .insert(documentsTable)
-      .values({
-        company,
-        doc_type,
-        fiscal_year: Number(year),
-        fiscal_period: period ?? "anual",
-        file_name: fileName,
-      })
-      .returning();
+  const rows: NewChunkInput[] = pieces.map((c, i) => {
+    const embedding = vectors[i];
+    if (!embedding) throw new Error(`Embedding ausente no chunk ${i}`);
 
-    if (!doc) throw new Error(`Falha ao inserir documento ${fileName}`);
-
-    for (let i = 0; i < chunks.length; i += BATCH) {
-      const batch = chunks.slice(i, i + BATCH);
-      const vectors = await embed(batch.map((c) => c.content));
-
-      await tx.insert(chunksTable).values(
-        batch.map((c, j) => {
-          const embedding = vectors[j];
-          if (!embedding) throw new Error(`Embedding ausente no chunk ${i + j}`);
-
-          return {
-            pipeline: PIPELINE,
-            page: c.page,
-            content: c.content,
-            embedding,
-            document_id: doc.id,
-          };
-        }),
-      );
-      console.log(`${Math.min(i + BATCH, chunks.length)} / ${chunks.length}`);
-    }
+    return { documentId: doc.id, pipeline: PIPELINE, page: c.page, content: c.content, embedding };
   });
+
+  await chunks.insertMany(rows);
 }
 
 const files = (await readdir(PDF_DIR)).filter((f) => f.endsWith(".pdf"));
+let failed = 0;
 
-for (const f of files) await ingestFile(f);
+console.log(`Pipeline: ${PIPELINE}`);
 
-process.exit(0);
+for (const f of files) {
+  try {
+    await ingestFile(f);
+  } catch (err) {
+    failed++;
+    console.error(`${f}: falhou`, err);
+  }
+}
+
+process.exit(failed > 0 ? 1 : 0);
