@@ -9,6 +9,9 @@ export type HybridRetrieverConfig = {
   candidates: number;
   maxDistance?: number;
   rrfK: number;
+  minStrictHits: number;
+  vectorWeight: number;
+  textWeight: number;
 };
 
 const DEFAULT_CONFIG: Omit<HybridRetrieverConfig, "pipeline"> = {
@@ -16,6 +19,9 @@ const DEFAULT_CONFIG: Omit<HybridRetrieverConfig, "pipeline"> = {
   candidates: 40,
   maxDistance: 0.6,
   rrfK: 60,
+  minStrictHits: 5,
+  vectorWeight: 1,
+  textWeight: 1,
 };
 
 export class HybridRetriever implements Retriever {
@@ -30,16 +36,33 @@ export class HybridRetriever implements Retriever {
   }
 
   async retrieve(query: string, filters: RetrieveFilters = {}): Promise<ScoredChunk[]> {
-    const { pipeline, topK, candidates, maxDistance, rrfK } = this.config;
-    const scoped = { ...filters, pipeline: filters.pipeline ?? pipeline };
+    const {
+      pipeline,
+      topK,
+      candidates,
+      maxDistance,
+      rrfK,
+      minStrictHits,
+      vectorWeight,
+      textWeight,
+    } = this.config;
+    const scoped = { ...filters, pipeline };
 
     const embedding = await this.embedder.embedOne(query);
 
     const [byVector, byText] = await Promise.all([
       this.chunks.searchByVector(embedding, scoped, { limit: candidates, maxDistance }),
-      this.chunks.searchByText(query, scoped, { limit: candidates }),
+      this.chunks.searchByText(query, scoped, { limit: candidates, minStrictHits }),
     ]);
 
-    return reciprocalRankFusion([byVector, byText], rrfK).slice(0, topK);
+    if (byVector.length === 0 && byText.strictCount === 0) return [];
+
+    return reciprocalRankFusion(
+      [
+        { items: byVector, weight: vectorWeight },
+        { items: byText.items, weight: textWeight },
+      ],
+      rrfK,
+    ).slice(0, topK);
   }
 }

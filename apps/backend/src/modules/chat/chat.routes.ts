@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { RetrieveFilters } from "../retrieval/types.js";
 import { askFactory } from "./factories/ask.factory.js";
 
-type AskBody = { question: string; filters?: RetrieveFilters };
+type AskBody = { question: string; filters?: Omit<RetrieveFilters, "pipeline"> };
 
 export async function askRoutes(app: FastifyInstance) {
   const askController = askFactory();
@@ -23,7 +23,6 @@ export async function askRoutes(app: FastifyInstance) {
                 fiscalYear: { type: "integer" },
                 docType: { type: "string" },
                 fiscalPeriod: { type: "string" },
-                pipeline: { type: "string" },
                 documentId: { type: "integer" },
               },
               additionalProperties: false,

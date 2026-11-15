@@ -1,0 +1,39 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2393da19-3d6b-49df-bd1b-9cfeb28cbaa8",
+  "prevIds": ["5e52def6-7c1a-4929-a5b3-9572dbc33fa0"],
+  "footprints": [
+    {
+      "statementType": "recreate_column",
+      "statementTarget": ["column", "public", "chunks", "fts"],
+      "writes": ["s|col|public.chunks.fts", "n|col|public.chunks.fts", "e|col|public.chunks.fts"],
+      "reads": ["n|tbl|public.chunks", "n|sch|public"],
+      "sqlHash": "5af3761ab3db9499"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": ["index", "public", "chunks", "chunks_fts_idx"],
+      "writes": [
+        "s|idx|public.chunks_fts_idx",
+        "n|idx|public.chunks_fts_idx",
+        "e|idx|public.chunks_fts_idx",
+        "n|rel|public.chunks_fts_idx"
+      ],
+      "reads": ["n|tbl|public.chunks", "n|sch|public", "n|col|public.chunks.fts"]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"chunks\",\"fts\"]",
+      "set": {
+        "generated": {
+          "as": "to_tsvector('pt_unaccent', \"chunks\".\"content\")",
+          "type": "stored"
+        }
+      }
+    }
+  ]
+}

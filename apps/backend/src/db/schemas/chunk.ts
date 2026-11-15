@@ -2,6 +2,8 @@ import { type SQL, sql } from "drizzle-orm";
 import { customType, index, integer, pgTable, serial, text, vector } from "drizzle-orm/pg-core";
 import { documentsTable } from "./document.js";
 
+export const FTS_CONFIG = "pt_unaccent";
+
 const tsvector = customType<{ data: string }>({
   dataType() {
     return "tsvector";
@@ -20,7 +22,7 @@ export const chunksTable = pgTable(
       .notNull()
       .references(() => documentsTable.id, { onDelete: "cascade" }),
     fts: tsvector("fts").generatedAlwaysAs(
-      (): SQL => sql`to_tsvector('portuguese', ${chunksTable.content})`,
+      (): SQL => sql`to_tsvector(${sql.raw(`'${FTS_CONFIG}'`)}, ${chunksTable.content})`,
     ),
   },
   (t) => [

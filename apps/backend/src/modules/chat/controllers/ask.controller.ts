@@ -4,7 +4,7 @@ import type { RetrieveFilters } from "../../retrieval/types.js";
 import type { AskUseCaseDTO } from "../usecases/ask.usecase.js";
 
 type AskBody = {
-  Body: { question: string; filters?: RetrieveFilters };
+  Body: { question: string; filters?: Omit<RetrieveFilters, "pipeline"> };
 };
 
 export class AskController implements Controller<AskBody> {

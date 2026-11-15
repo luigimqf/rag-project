@@ -16,7 +16,7 @@ export function buildContext(chunks: RetrievedChunk[], maxChars = 12_000) {
     const header = `[${n}] ${c.company} · ${c.docType} · ${c.fiscalPeriod} ${c.fiscalYear} · ${c.fileName}, p. ${c.page}`;
     const block = `${header}\n${c.content}`;
 
-    if (total + block.length > maxChars) break;
+    if (total + block.length > maxChars) continue;
 
     blocks.push(block);
     sources.push({ n, chunkId: c.id, fileName: c.fileName, page: c.page });

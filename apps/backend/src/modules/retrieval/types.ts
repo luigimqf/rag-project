@@ -18,6 +18,8 @@ export type RetrievedChunk = {
   fiscalYear: number;
   fiscalPeriod: string;
   fileName: string;
+  distance?: number; // depuração
+  textRank?: number; // depuração
 };
 
 export type NewChunkInput = {
@@ -34,4 +36,10 @@ export interface Retriever {
 
 export type ScoredChunk = RetrievedChunk & { score: number };
 
-export type SearchOptions = { limit: number; maxDistance?: number | undefined };
+export type SearchOptions = {
+  limit: number;
+  maxDistance?: number | undefined;
+  minStrictHits?: number | undefined;
+};
+
+export type TextSearchResult = { items: RetrievedChunk[]; strictCount: number };

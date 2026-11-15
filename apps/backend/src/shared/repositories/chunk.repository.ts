@@ -1,15 +1,18 @@
-import { and, cosineDistance, desc, eq, getTableColumns, lt, type SQL, sql } from "drizzle-orm";
+import { and, cosineDistance, desc, eq, getTableColumns, type SQL, sql } from "drizzle-orm";
 import type { Database } from "../../db/index.js";
-import { chunksTable } from "../../db/schemas/chunk.js";
+import { chunksTable, FTS_CONFIG } from "../../db/schemas/chunk.js";
 import { documentsTable } from "../../db/schemas/document.js";
 import type {
   NewChunkInput,
   RetrievedChunk,
   RetrieveFilters,
   SearchOptions,
+  TextSearchResult,
 } from "../../modules/retrieval/types.js";
 
 const INSERT_BATCH = 500;
+const ftsConfig = sql.raw(`'${FTS_CONFIG}'`);
+const DEFAULT_MIN_STRICT_HITS = 5;
 
 export interface ChunkRepositoryDTO {
   existsForDocument(documentId: number, pipeline: string): Promise<boolean>;
@@ -23,12 +26,16 @@ export interface ChunkRepositoryDTO {
     query: string,
     filters: RetrieveFilters,
     opts: SearchOptions,
-  ): Promise<RetrievedChunk[]>;
+  ): Promise<TextSearchResult>;
 }
 
 const { id: _docId, ...documentColumns } = getTableColumns(documentsTable);
 const { embedding: _emb, fts: _fts, ...chunkColumns } = getTableColumns(chunksTable);
 const selection = { ...documentColumns, ...chunkColumns };
+const selectionSql = sql.join(
+  Object.entries(selection).map(([key, col]) => sql`${col} as ${sql.identifier(key)}`),
+  sql`, `,
+);
 
 export class ChunkRepository implements ChunkRepositoryDTO {
   constructor(private readonly db: Database) {}
@@ -58,37 +65,66 @@ export class ChunkRepository implements ChunkRepositoryDTO {
     filters: RetrieveFilters,
     { limit, maxDistance }: SearchOptions,
   ): Promise<RetrievedChunk[]> {
-    const distance = cosineDistance(chunksTable.embedding, embedding).mapWith(Number);
+    const distance = cosineDistance(chunksTable.embedding, embedding);
+    const where = and(...this.toConditions(filters));
+
+    const ef = Math.max(100, Math.trunc(limit));
+    if (!Number.isSafeInteger(ef) || ef <= 0) {
+      throw new Error(`ef_search inválido: ${ef}`);
+    }
 
     return this.db.transaction(async (tx) => {
-      await tx.execute(sql`SET LOCAL hnsw.ef_search = 100`);
+      await tx.execute(sql.raw(`SET LOCAL hnsw.ef_search = ${ef}`));
       await tx.execute(sql`SET LOCAL hnsw.iterative_scan = relaxed_order`);
 
-      return tx
-        .select(selection)
-        .from(chunksTable)
-        .innerJoin(documentsTable, eq(chunksTable.documentId, documentsTable.id))
-        .where(
-          and(
-            ...this.toConditions(filters),
-            maxDistance !== undefined ? lt(distance, maxDistance) : undefined,
-          ),
-        )
-        .orderBy(distance)
-        .limit(limit);
+      return tx.execute<RetrievedChunk>(
+        sql`
+          with nearest as materialized (
+            select ${selectionSql}, ${distance} as distance
+            from ${chunksTable}
+            inner join ${documentsTable} on ${eq(chunksTable.documentId, documentsTable.id)}
+            ${where ? sql`where ${where}` : sql.empty()}
+            order by distance
+            limit ${limit}
+          )
+          select * from nearest
+          ${maxDistance !== undefined ? sql`where distance < ${maxDistance}` : sql.empty()}
+          order by distance`,
+        "objects",
+      );
     });
   }
 
-  searchByText(
+  async searchByText(
     query: string,
     filters: RetrieveFilters,
-    { limit }: SearchOptions,
+    { limit, minStrictHits = DEFAULT_MIN_STRICT_HITS }: SearchOptions,
+  ): Promise<TextSearchResult> {
+    const strictQuery = sql`plainto_tsquery(${ftsConfig}, ${query})`;
+    const strict = await this.runTextSearch(strictQuery, filters, limit);
+
+    if (strict.length >= Math.min(minStrictHits, limit)) {
+      return { items: strict, strictCount: strict.length };
+    }
+
+    const orQuery = sql`to_tsquery('simple', replace(plainto_tsquery(${ftsConfig}, ${query})::text, ' & ', ' | '))`;
+    const loose = await this.runTextSearch(orQuery, filters, limit + strict.length);
+
+    const seen = new Set(strict.map((c) => c.id));
+    const items = [...strict, ...loose.filter((c) => !seen.has(c.id))].slice(0, limit);
+
+    return { items, strictCount: strict.length };
+  }
+
+  private runTextSearch(
+    tsq: SQL,
+    filters: RetrieveFilters,
+    limit: number,
   ): Promise<RetrievedChunk[]> {
-    const tsq = sql`to_tsquery('portuguese', replace(plainto_tsquery('portuguese', ${query})::text, ' & ', ' | '))`;
-    const rank = sql<number>`ts_rank_cd(${chunksTable.fts}, ${tsq})`;
+    const rank = sql<number>`ts_rank_cd(${chunksTable.fts}, ${tsq})`.mapWith(Number);
 
     return this.db
-      .select(selection)
+      .select({ ...selection, textRank: rank })
       .from(chunksTable)
       .innerJoin(documentsTable, eq(chunksTable.documentId, documentsTable.id))
       .where(and(sql`${chunksTable.fts} @@ ${tsq}`, ...this.toConditions(filters)))
